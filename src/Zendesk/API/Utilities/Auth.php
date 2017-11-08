@@ -12,6 +12,10 @@ use Zendesk\API\Exceptions\AuthException;
 class Auth
 {
     /**
+    * The authentication setting to use an OAuth Token, with Impersonation.
+    */
+    const IMP = 'imp';
+    /**
      * The authentication setting to use an OAuth Token.
      */
     const OAUTH = 'oauth';
@@ -37,7 +41,7 @@ class Auth
      */
     protected static function getValidAuthStrategies()
     {
-        return [self::BASIC, self::OAUTH];
+        return [self::BASIC, self::OAUTH, self::IMP];
     }
 
     /**
@@ -67,6 +71,10 @@ class Auth
             if (! array_key_exists('token', $options)) {
                 throw new AuthException('Please supply `token` for oauth.');
             }
+        } elseif ($strategy == self::IMP){
+            if(! array_key_exists('user_id', $options) || ! array_key_exists('token', $options)) {
+                throw new AuthException('Please supply `user_id` and `token` for imp auth.');
+            }
         }
 
         $this->authOptions = $options;
@@ -92,6 +100,11 @@ class Auth
         } elseif ($this->authStrategy === self::OAUTH) {
             $oAuthToken = $this->authOptions['token'];
             $request    = $request->withAddedHeader('Authorization', ' Bearer ' . $oAuthToken);
+        } elseif($this->authStrategy === self::IMP){
+            $oAuthToken = $this->authOptions['token'];
+            $userId     = $this->authOptions['user_id'];
+            $request    = $request->withAddedHeader('Authorization', ' Bearer ' . $oAuthToken);
+            $request    = $request->withAddedHeader('X-On-Behalf-Of', $userId);
         } else {
             throw new AuthException('Please set authentication to send requests.');
         }
